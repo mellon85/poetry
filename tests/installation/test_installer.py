@@ -10,6 +10,7 @@ from poetry.installation import Installer as BaseInstaller
 from poetry.installation.noop_installer import NoopInstaller
 from poetry.packages import Locker as BaseLocker
 from poetry.packages import ProjectPackage
+from poetry.puzzle.exceptions import SolverProblemError
 from poetry.repositories import Pool
 from poetry.repositories import Repository
 from poetry.repositories.installed_repository import InstalledRepository
@@ -1396,3 +1397,19 @@ def test_installer_required_extras_should_be_installed(
     assert len(installer.installer.installs) == 2
     assert len(installer.installer.updates) == 0
     assert len(installer.installer.removals) == 0
+
+
+def test_run_with_pythonsub_dependencies(installer, locker, repo, package):
+    package_a = get_package("A", "1.0")
+    package_a.python_versions = "^3.7"
+    package_b = get_package("B", "1.1")
+    package_b.python_versions = "<2.8"
+
+    repo.add_package(package_a)
+    repo.add_package(package_b)
+
+    package.add_dependency("A", "~1.0")
+    package.add_dependency("B", "^1.0")
+
+    with pytest.raises(SolverProblemError):
+        installer.run()
